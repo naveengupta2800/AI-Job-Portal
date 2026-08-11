@@ -1,0 +1,164 @@
+
+.container {
+  padding: 24px;
+  max-width: 1300px;
+  margin: auto;
+}
+
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+
+.header-row h2 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-left: 20px;
+  color: #0f172a;
+  letter-spacing: 0.3px;
+}
+
+.muted {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.input {
+  padding: 11px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 15px;
+  outline: none;
+  transition: 0.25s ease;
+  background: #ffffff;
+}
+
+.input::placeholder {
+  color: #94a3b8;
+}
+
+.input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+}
+
+
+.banner-img {
+  width: 60%;
+  max-width: 520px;
+  display: block;
+  margin: 0 auto 30px;
+  border-radius: 14px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+}
+
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+}
+
+.grid .empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 70px 0;
+  font-size: 18px;
+  color: #64748b;
+}
+
+
+.grid > * {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.grid > *:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.08);
+}
+
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .input {
+    width: 100%;
+  }
+
+  .banner-img {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+
+.footer {
+  background: linear-gradient(135deg, #020617, #000000);
+  color: #ffffff;
+  margin-top: 60px;
+  padding: 40px 20px;
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: auto;
+  text-align: center;
+}
+
+.footer-content h3 {
+  margin-bottom: 12px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.footer-content p {
+  font-size: 14px;
+  color: #d1d5db;
+  margin-bottom: 8px;
+}
+
+.footer-copy {
+  font-size: 13px;
+  color: #9ca3af;
+  margin-top: 12px;
+}
+
+/* ================= DARK MODE ================= */
+
+.dark .header-row h2 {
+  color: #f8fafc;
+}
+
+.dark .muted {
+  color: #cbd5f5;
+}
+
+.dark .input {
+  background-color: #020617;
+  color: #f8fafc;
+  border-color: #1e293b;
+}
+
+.dark .input::placeholder {
+  color: #94a3b8;
+}
+
+.dark .grid .empty {
+  color: #cbd5f5;
+}
+
+.dark .footer {
+  background: linear-gradient(135deg, #020617, #020617);
+}
