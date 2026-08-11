@@ -12,6 +12,12 @@ export default function RecruiterSidebar({ onLogout }) {
       type: "normal",
     },
     {
+  to: "/payment",
+  label: "Payment",
+  icon: "₹",
+  type: "payment",
+},
+    {
       to: "/create-job",
       label: "Create Job",
       icon: "+",

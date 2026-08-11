@@ -21,6 +21,7 @@ import JobApply from "./components/jobseeker/JobApply.jsx";
 /* ================= RECRUITER ================= */
 import RecruiterSidebar from "./components/recruiter/RecruiterSidebar.jsx";
 import Dashboard from "./components/recruiter/Dashboard.jsx";
+import PaymentPlans from "./components/recruiter/PaymentPlans.jsx";
 import CreateJobForm from "./components/recruiter/CreateJobForm.jsx";
 import MyJobListings from "./components/recruiter/MyJobListings.jsx";
 import ApplicationsView from "./components/recruiter/ApplicationsView.jsx";
@@ -315,7 +316,17 @@ const handleLogout = async () => {
                 />
               }
             />
-
+            
+ <Route
+  path="payment"
+  element={
+    <PaymentPlans
+      onSuccess={(payment) => {
+        console.log("Payment successful:", payment);
+      }}
+    />
+  }
+/>
             {/* Create Job */}
             <Route
               path="create-job"
