@@ -2,6 +2,7 @@ const {
   analyzeProfile,
   improveExperience,
   analyzeJobMatch,
+  careerChat,
 } = require("../services/geminiService");
 
 // =====================================================
@@ -147,6 +148,50 @@ const analyzeJobMatchController =
     }
   };
 
+  // =====================================================
+// AI CAREER ASSISTANT
+// =====================================================
+
+const careerChatController = async (req, res) => {
+  try {
+    const { message, history = [], profile = {} } = req.body;
+
+    if (typeof message !== "string" || !message.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter a message.",
+      });
+    }
+
+    if (message.length > 2000) {
+      return res.status(400).json({
+        success: false,
+        message: "Message must not exceed 2000 characters.",
+      });
+    }
+
+    const reply = await careerChat({
+      message: message.trim(),
+      history: Array.isArray(history) ? history : [],
+      profile:
+        profile && typeof profile === "object" && !Array.isArray(profile)
+          ? profile
+          : {},
+    });
+
+    return res.status(200).json({
+      success: true,
+      reply,
+    });
+  } catch (error) {
+    console.error("AI Career Assistant Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Career assistant is temporarily unavailable. Please try again.",
+    });
+  }
+};
 // =====================================================
 // EXPORT
 // =====================================================
@@ -155,4 +200,5 @@ module.exports = {
   analyzeJobseekerProfile,
   improveJobseekerExperience,
   analyzeJobMatchController,
+  careerChatController,
 };

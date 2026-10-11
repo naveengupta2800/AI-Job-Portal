@@ -6,6 +6,7 @@ const {
   analyzeJobseekerProfile,
   improveJobseekerExperience,
   analyzeJobMatchController,
+  careerChatController,
 } = require("../controllers/aiController");
 
 // =====================================================
@@ -30,9 +31,9 @@ router.post(
 // JOB MATCH AI
 // =====================================================
 
-router.post(
-  "/job-match",
+router.post( "/job-match",
   analyzeJobMatchController
 );
 
+router.post("/career-chat", careerChatController);
 module.exports = router;
