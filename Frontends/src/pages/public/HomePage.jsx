@@ -466,9 +466,9 @@ export default function HomePage() {
               <Users size={15} /> For hiring teams
             </div>
 
-            <h2 className="mt-5 text-3xl font-extrabold tracking-tight sm:text-4xl">
+            <h1 className="mt-5 text-3xl font-extrabold tracking-tight sm:text-4xl">
               Find people who move your team forward.
-            </h2>
+            </h1>
 
             <p className="mt-4 max-w-xl text-sm leading-7 text-slate-300 sm:text-base">
               Create a recruiter account to publish opportunities and manage
