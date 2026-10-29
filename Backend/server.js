@@ -1,3 +1,4 @@
+
 require("dotenv").config();
 
 const express = require("express");
@@ -22,12 +23,10 @@ const aiRoutes = require("./routes/aiRoutes");
 const app = express();
 
 // ================= BASIC MIDDLEWARE =================
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ================= CORS =================
-
 app.use(
   cors({
     origin: "http://localhost:5173",
@@ -38,20 +37,15 @@ app.use(
 );
 
 // ================= SESSION =================
-
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "job-portal-secret-key",
-
     resave: false,
-
     saveUninitialized: false,
 
     store: MongoStore.create({
       mongoUrl: process.env.MONGO_URI,
-
       collectionName: "sessions",
-
       ttl: 24 * 60 * 60,
     }),
 
@@ -65,7 +59,6 @@ app.use(
 );
 
 // ================= DATABASE =================
-
 connectDB();
 
 // ================= ROUTES =================
@@ -76,8 +69,9 @@ app.use("/api/auth", authRoutes);
 // Jobs
 app.use("/api/jobs", jobsRoutes);
 
-// Payment
-app.use("/api/payment", paymentRoutes);
+// Payments
+app.use("/api/payments", paymentRoutes);
+
 // Applications
 app.use("/api/apply", applyRoutes);
 
@@ -91,14 +85,12 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/ai", aiRoutes);
 
 // ================= STATIC FILES =================
-
 app.use(
   "/uploads",
   express.static(path.join(__dirname, "uploads"))
 );
 
 // ================= TEST ROUTE =================
-
 app.get("/", (req, res) => {
   res.status(200).json({
     success: true,
@@ -107,18 +99,16 @@ app.get("/", (req, res) => {
 });
 
 // ================= SESSION TEST =================
-
 app.get("/api/auth/session-test", (req, res) => {
   res.json({
     sessionExists: !!req.session,
     sessionId: req.sessionID,
-    userId: req.session.userId || null,
-    role: req.session.role || null,
+    userId: req.session?.userId || null,
+    role: req.session?.role || null,
   });
 });
 
-// ================= 404 =================
-
+// ================= 404 HANDLER =================
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -127,12 +117,8 @@ app.use((req, res) => {
 });
 
 // ================= ERROR HANDLER =================
-
 app.use((err, req, res, next) => {
-  console.error("=================================");
-  console.error("SERVER ERROR");
-  console.error(err);
-  console.error("=================================");
+  console.error("SERVER ERROR:", err);
 
   res.status(500).json({
     success: false,
@@ -141,9 +127,8 @@ app.use((err, req, res, next) => {
 });
 
 // ================= SERVER =================
-
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`Server: http://localhost:${PORT}`);
+  console.log(`Server running at http://localhost:${PORT}`);
 });

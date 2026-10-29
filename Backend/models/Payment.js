@@ -1,3 +1,4 @@
+
 const mongoose = require("mongoose");
 
 const paymentSchema = new mongoose.Schema(
@@ -6,22 +7,25 @@ const paymentSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+      index: true,
     },
 
     plan: {
       type: String,
-      enum: ["Starter", "Professional", "Business"],
+      enum: ["Professional", "Enterprise"],
       required: true,
     },
 
     amount: {
       type: Number,
       required: true,
+      min: 1,
     },
 
     currency: {
       type: String,
       default: "INR",
+      enum: ["INR"],
     },
 
     orderId: {
@@ -37,18 +41,20 @@ const paymentSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["Created", "Paid", "Failed"],
+      enum: ["Created","Pending", "Paid", "Failed"],
       default: "Created",
     },
 
     jobLimit: {
       type: Number,
       required: true,
+      min: -1,
     },
 
     validityDays: {
       type: Number,
       required: true,
+      min: 1,
     },
 
     paidAt: {
@@ -60,5 +66,11 @@ const paymentSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// Helpful for recruiter payment history
+paymentSchema.index({
+  recruiter: 1,
+  createdAt: -1,
+});
 
 module.exports = mongoose.model("Payment", paymentSchema);

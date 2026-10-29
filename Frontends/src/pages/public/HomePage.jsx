@@ -85,7 +85,7 @@ export default function HomePage() {
             </span>
 
             <span className="text-xl font-extrabold tracking-tight">
-              Career<span className="text-violet-600">AI</span>
+              JOB <span className="text-violet-600">PORTAL</span>
             </span>
           </Link>
 
@@ -493,7 +493,7 @@ export default function HomePage() {
               <BriefcaseBusiness size={19} />
             </span>
             <span className="font-extrabold tracking-tight">
-              Career<span className="text-violet-600">AI</span>
+              JOB <span className="text-violet-600">PORTAL</span>
             </span>
           </Link>
 

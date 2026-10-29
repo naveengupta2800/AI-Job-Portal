@@ -1,357 +1,337 @@
-const Razorpay = require("razorpay");
+
 const crypto = require("crypto");
 const Payment = require("../models/Payment");
-
-// =====================================================
-// RAZORPAY CONFIG CHECK
-// =====================================================
-
-if (!process.env.RAZORPAY_KEY_ID) {
-  console.error("❌ RAZORPAY_KEY_ID is missing in .env");
-}
-
-if (!process.env.RAZORPAY_KEY_SECRET) {
-  console.error("❌ RAZORPAY_KEY_SECRET is missing in .env");
-}
-
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
-
-// =====================================================
-// PAYMENT PLANS
-// =====================================================
+const User = require("../models/User");
 
 const PLANS = {
-  Starter: {
-    amount: 99,
-    jobLimit: 1,
-    validityDays: 30,
-  },
-
   Professional: {
-    amount: 299,
-    jobLimit: 5,
+    amount: 99,
+    jobLimit: -1,
     validityDays: 30,
   },
-
-  Business: {
-    amount: 599,
-    jobLimit: 15,
-    validityDays: 60,
+  Enterprise: {
+    amount: 199,
+    jobLimit: -1,
+    validityDays: 30,
   },
 };
 
-// =====================================================
-// CREATE ORDER
-// =====================================================
+const CASHFREE_BASE_URL = "https://sandbox.cashfree.com/pg";
+const API_VERSION = process.env.CASHFREE_API_VERSION || "2025-01-01";
 
+function getCashfreeHeaders() {
+  const appId = process.env.CASHFREE_APP_ID;
+  const secretKey = process.env.CASHFREE_SECRET_KEY;
+
+  if (!appId || !secretKey) {
+    throw new Error("Cashfree Sandbox credentials are not configured");
+  }
+
+  return {
+    "x-client-id": appId,
+    "x-client-secret": secretKey,
+    "x-api-version": API_VERSION,
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+}
+
+async function cashfreeRequest(path, options = {}) {
+  const response = await fetch(`${CASHFREE_BASE_URL}${path}`, {
+    ...options,
+    headers: {
+      ...getCashfreeHeaders(),
+      ...options.headers,
+    },
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    console.error("Cashfree API error:", response.status, data);
+    throw new Error("Cashfree API request failed");
+  }
+
+  return data;
+}
+
+// Create a Cashfree Sandbox order
 exports.createOrder = async (req, res) => {
   try {
-    console.log("====================================");
-    console.log("💳 CREATE PAYMENT ORDER");
-    console.log("Recruiter ID:", req.userId);
-    console.log(
-      "Razorpay Key:",
-      process.env.RAZORPAY_KEY_ID
-        ? "Available"
-        : "Missing"
-    );
-    console.log(
-      "Razorpay Secret:",
-      process.env.RAZORPAY_KEY_SECRET
-        ? "Available"
-        : "Missing"
-    );
-    console.log("====================================");
-
-    // Check authentication
     if (!req.userId) {
       return res.status(401).json({
-        message: "Recruiter authentication required",
+        success: false,
+        message: "Authentication required",
       });
     }
 
-    const { plan } = req.body;
-
-    console.log("Selected Plan:", plan);
-
-    // Validate plan
-    if (!plan || !PLANS[plan]) {
-      return res.status(400).json({
-        message: "Invalid payment plan",
-      });
-    }
-
-    // Check Razorpay keys
-    if (
-      !process.env.RAZORPAY_KEY_ID ||
-      !process.env.RAZORPAY_KEY_SECRET
-    ) {
-      console.error(
-        "❌ Razorpay keys are missing"
-      );
-
-      return res.status(500).json({
-        message:
-          "Razorpay configuration is missing on server",
-      });
-    }
-
+    const { plan } = req.body || {};
     const selectedPlan = PLANS[plan];
 
-    // Amount in paise
-    const amountInPaise =
-      selectedPlan.amount * 100;
+    if (!selectedPlan) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid paid plan",
+      });
+    }
 
-    console.log(
-      "Amount:",
-      selectedPlan.amount,
-      "INR"
-    );
+    const user = await User.findById(req.userId);
 
-    // Create Razorpay order
-    const order = await razorpay.orders.create({
-      amount: amountInPaise,
-      currency: "INR",
+    if (!user || user.role !== "recruiter") {
+      return res.status(403).json({
+        success: false,
+        message: "Recruiter account required",
+      });
+    }
 
-      receipt: `job_${Date.now()}`,
+    // These fallback values are for Sandbox testing only.
+    const phone = String(
+      user.phone || user.mobile || "9999999999"
+    ).replace(/\D/g, "");
 
-      notes: {
-        recruiterId: req.userId.toString(),
-        plan: plan,
-      },
+    if (phone.length < 10) {
+      return res.status(400).json({
+        success: false,
+        message: "Add a valid phone number to your recruiter profile",
+      });
+    }
+
+    const orderId = `jobportal_${Date.now()}_${crypto
+      .randomBytes(4)
+      .toString("hex")}`;
+
+    const frontendUrl =
+      process.env.FRONTEND_URL || "http://localhost:5173";
+
+    const cashfreeOrder = await cashfreeRequest("/orders", {
+      method: "POST",
+      body: JSON.stringify({
+        order_id: orderId,
+        order_amount: selectedPlan.amount,
+        order_currency: "INR",
+        customer_details: {
+          customer_id: String(user._id),
+          customer_phone: phone,
+          ...(user.email ? { customer_email: user.email } : {}),
+        },
+        order_meta: {
+          return_url:
+            `${frontendUrl}/recruiter/billing?order_id={order_id}`,
+        },
+        order_note: `${plan} subscription - Sandbox`,
+      }),
     });
 
-    console.log(
-      "✅ Razorpay Order Created:",
-      order.id
-    );
-
-    // Save payment in database
-    const payment = await Payment.create({
-      recruiter: req.userId,
-
-      plan: plan,
-
+    await Payment.create({
+      recruiter: user._id,
+      plan,
       amount: selectedPlan.amount,
-
       currency: "INR",
-
-      orderId: order.id,
-
+      orderId,
       jobLimit: selectedPlan.jobLimit,
-
       validityDays: selectedPlan.validityDays,
-
       status: "Created",
     });
 
-    console.log(
-      "✅ Payment saved:",
-      payment._id
-    );
-
-    // Response
     return res.status(201).json({
-      message: "Payment order created successfully",
-
       success: true,
-
-      orderId: order.id,
-
+      orderId,
+      paymentSessionId: cashfreeOrder.payment_session_id,
       amount: selectedPlan.amount,
-
       currency: "INR",
-
-      plan: plan,
-
-      keyId: process.env.RAZORPAY_KEY_ID,
-
-      paymentId: payment._id,
+      plan,
+      environment: "sandbox",
     });
   } catch (error) {
-    console.error("====================================");
-    console.error("❌ CREATE ORDER ERROR");
-    console.error(error);
-    console.error("====================================");
+    console.error("Create Cashfree order error:", error.message);
 
     return res.status(500).json({
       success: false,
-      message:
-        error?.error?.description ||
-        error?.message ||
-        "Failed to create payment order",
+      message: "Unable to create Cashfree Sandbox order",
     });
   }
 };
 
-// =====================================================
-// VERIFY PAYMENT
-// =====================================================
-
+// Verify payment using Cashfree's server-side order status
 exports.verifyPayment = async (req, res) => {
   try {
-    const {
-      razorpay_order_id,
-      razorpay_payment_id,
-      razorpay_signature,
-    } = req.body;
-
-    console.log(
-      "Payment Verification:",
-      razorpay_order_id
-    );
-
-    if (
-      !razorpay_order_id ||
-      !razorpay_payment_id ||
-      !razorpay_signature
-    ) {
-      return res.status(400).json({
-        message: "Payment details missing",
+    if (!req.userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
       });
     }
 
-    // Generate signature
-    const generatedSignature =
-      crypto
-        .createHmac(
-          "sha256",
-          process.env.RAZORPAY_KEY_SECRET
-        )
-        .update(
-          `${razorpay_order_id}|${razorpay_payment_id}`
-        )
-        .digest("hex");
+    const { orderId } = req.body || {};
 
-    // Verify signature
-    if (
-      generatedSignature !==
-      razorpay_signature
-    ) {
-      console.error(
-        "❌ Invalid Razorpay signature"
-      );
-
+    if (!orderId || typeof orderId !== "string") {
       return res.status(400).json({
-        message:
-          "Payment verification failed",
+        success: false,
+        message: "Valid orderId is required",
       });
     }
 
-    // Find payment
-    const payment =
-      await Payment.findOne({
-        orderId: razorpay_order_id,
-
-        recruiter: req.userId,
-      });
+    const payment = await Payment.findOne({
+      orderId,
+      recruiter: req.userId,
+    });
 
     if (!payment) {
       return res.status(404).json({
-        message:
-          "Payment record not found",
+        success: false,
+        message: "Payment order not found",
       });
     }
 
-    // Prevent duplicate verification
     if (payment.status === "Paid") {
       return res.json({
         success: true,
-        message:
-          "Payment already verified",
-        payment,
+        paid: true,
+        message: "Payment already verified",
       });
     }
 
-    payment.paymentId =
-      razorpay_payment_id;
+    const remoteOrder = await cashfreeRequest(
+      `/orders/${encodeURIComponent(orderId)}`,
+      { method: "GET" }
+    );
+
+    // Verify order ownership against our own database, amount and currency.
+    if (
+      Number(remoteOrder.order_amount) !== Number(payment.amount) ||
+      remoteOrder.order_currency !== payment.currency
+    ) {
+      return res.status(400).json({
+        success: false,
+        paid: false,
+        message: "Order amount or currency does not match",
+      });
+    }
+
+    // Never activate a plan for ACTIVE/PENDING/FAILED orders.
+    if (remoteOrder.order_status !== "PAID") {
+      return res.status(200).json({
+        success: true,
+        paid: false,
+        status: remoteOrder.order_status || "PENDING",
+        message: "Payment is not confirmed yet",
+      });
+    }
+
+    const planConfig = PLANS[payment.plan];
+
+    if (!planConfig) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid subscription plan",
+      });
+    }
+
+    const expiry = new Date();
+    expiry.setDate(expiry.getDate() + planConfig.validityDays);
+
+    const user = await User.findOneAndUpdate(
+      {
+        _id: req.userId,
+        role: "recruiter",
+      },
+      {
+        $set: {
+          subscriptionPlan: payment.plan,
+          subscriptionExpiresAt: expiry,
+          jobLimit: planConfig.jobLimit,
+        },
+      },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Recruiter not found",
+      });
+    }
 
     payment.status = "Paid";
-
     payment.paidAt = new Date();
-
     await payment.save();
-
-    console.log(
-      "✅ Payment verified:",
-      razorpay_payment_id
-    );
 
     return res.json({
       success: true,
-
-      message:
-        "Payment verified successfully",
-
-      payment: {
-        id: payment._id,
-
-        orderId:
-          payment.orderId,
-
-        paymentId:
-          payment.paymentId,
-
-        plan: payment.plan,
-
-        amount:
-          payment.amount,
-
-        jobLimit:
-          payment.jobLimit,
-
-        validityDays:
-          payment.validityDays,
+      paid: true,
+      message: "Sandbox payment verified and plan activated",
+      subscription: {
+        plan: user.subscriptionPlan,
+        expiresAt: user.subscriptionExpiresAt,
+        jobLimit: user.jobLimit,
       },
     });
   } catch (error) {
-    console.error(
-      "❌ Verify Payment Error:",
-      error
-    );
+    console.error("Verify Cashfree payment error:", error.message);
 
     return res.status(500).json({
       success: false,
-      message:
-        error?.message ||
-        "Payment verification failed",
+      message: "Unable to verify Cashfree payment",
     });
   }
 };
 
-// =====================================================
-// PAYMENT HISTORY
-// =====================================================
-
-exports.getPaymentHistory = async (
-  req,
-  res
-) => {
+exports.getPaymentHistory = async (req, res) => {
   try {
-    const payments =
-      await Payment.find({
-        recruiter: req.userId,
-      })
-        .sort({
-          createdAt: -1,
-        });
+    const payments = await Payment.find({
+      recruiter: req.userId,
+    }).sort({ createdAt: -1 });
 
     return res.json({
       success: true,
       payments,
     });
   } catch (error) {
-    console.error(
-      "Payment History Error:",
-      error
-    );
+    console.error("Payment history error:", error.message);
 
     return res.status(500).json({
-      message:
-        "Failed to fetch payment history",
+      success: false,
+      message: "Unable to fetch payment history",
+    });
+  }
+};
+
+exports.getMySubscription = async (req, res) => {
+  try {
+    const user = await User.findOne({
+      _id: req.userId,
+      role: "recruiter",
+    }).select(
+      "subscriptionPlan subscriptionExpiresAt jobLimit totalJobsPosted"
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Recruiter not found",
+      });
+    }
+
+    const expired =
+      user.subscriptionExpiresAt &&
+      user.subscriptionExpiresAt <= new Date();
+
+    return res.json({
+      success: true,
+      subscription: {
+        plan: expired ? "Starter" : user.subscriptionPlan || "Starter",
+        expiresAt: user.subscriptionExpiresAt,
+        jobLimit: expired ? 2 : user.jobLimit ?? 2,
+        totalJobsPosted: user.totalJobsPosted || 0,
+        expired: Boolean(expired),
+      },
+    });
+  } catch (error) {
+    console.error("Subscription error:", error.message);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to fetch subscription",
     });
   }
 };

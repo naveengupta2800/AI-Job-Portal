@@ -56,11 +56,6 @@ button {
   cursor: pointer;
 }
 
-a {
-  color: black;
-  text-decoration: none;
-}
-
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
@@ -70,7 +65,6 @@ select:focus-visible {
   outline-offset: 2px;
 }
 
-h1,
 h2,
 h3,
 h4,

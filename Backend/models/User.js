@@ -32,7 +32,24 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
+subscriptionPlan: {
+  type: String,
+  enum: ["Starter", "Professional", "Enterprise"],
+  default: "Starter",
+},
+
+subscriptionExpiresAt: {
+  type: Date,
+  default: null,
+},
+
+jobLimit: {
+  type: Number,
+  default: 2,
+  min: -1,
+},
 
 }, { timestamps: true });
+
 
 module.exports = mongoose.model("User", userSchema);
