@@ -3,6 +3,11 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const generateOTP = require("../utils/generateOTP");
 const sendEmail = require("../utils/sendEmail");
+const { OAuth2Client } = require("google-auth-library");
+
+const googleClient = new OAuth2Client(
+  process.env.GOOGLE_CLIENT_ID
+);
 
 // Helper: generate JWT
 const createToken = (userId) => {
@@ -109,28 +114,6 @@ exports.login = async (req, res) => {
 };
 
 
-
-exports.logout = (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      console.error("Logout error:", err);
-      return res.status(500).json({
-        message: "Logout failed",
-      });
-    }
-
-    res.clearCookie("connect.sid", {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: false,
-    });
-
-    return res.status(200).json({
-      message: "Logged out successfully",
-    });
-  });
-};
-
 // New endpoint to fetch role by userId from session/JWT
 exports.getUserRole = async (req, res) => {
   try {
@@ -151,4 +134,123 @@ exports.getUserRole = async (req, res) => {
     console.log(err);
     res.status(500).json({ message: "Server error" });
   }
+};
+// GOOGLE LOGIN
+exports.googleLogin = async (req, res) => {
+  try {
+    const { credential, role } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({
+        message: "Google credential is required",
+      });
+    }
+
+    // Verify Google ID token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+
+    const googleId = payload.sub;
+    const email = payload.email?.toLowerCase();
+    const name = payload.name;
+
+    if (!email || !payload.email_verified) {
+      return res.status(400).json({
+        message: "Google email is not verified",
+      });
+    }
+
+    // Check existing user
+    let user = await User.findOne({ email });
+
+    if (user) {
+      // Prevent conflicting Google accounts
+      if (user.googleId && user.googleId !== googleId) {
+        return res.status(409).json({
+          message: "This email is linked to another Google account",
+        });
+      }
+
+      // Link Google account with existing email account
+      if (!user.googleId) {
+        user.googleId = googleId;
+        await user.save();
+      }
+
+      user.isVerified = true;
+      await user.save();
+
+    } else {
+      // New user must select a role
+      if (!["jobseeker", "recruiter"].includes(role)) {
+        return res.status(400).json({
+          message: "Please select a valid role",
+        });
+      }
+
+      user = new User({
+        name,
+        email,
+        googleId,
+        role,
+        isVerified: true,
+      });
+
+      await user.save();
+    }
+
+    // Generate existing JWT
+    const token = createToken(user.id);
+
+    // Save authentication in existing session
+    req.session.token = token;
+    req.session.userId = user.id;
+
+    req.session.save((err) => {
+      if (err) {
+        console.log("Google session save error:", err);
+
+        return res.status(500).json({
+          message: "Session error",
+        });
+      }
+
+      return res.status(200).json({
+        message: "Google login successful",
+        role: user.role,
+      });
+    });
+
+  } catch (err) {
+    console.log("Google Login Error:", err);
+
+    return res.status(500).json({
+      message: "Google authentication failed",
+    });
+  }
+};
+
+exports.logout = (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.error("Logout error:", err);
+      return res.status(500).json({
+        message: "Logout failed",
+      });
+    }
+
+    res.clearCookie("connect.sid", {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false,
+    });
+
+    return res.status(200).json({
+      message: "Logged out successfully",
+    });
+  });
 };

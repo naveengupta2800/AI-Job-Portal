@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
+import GoogleLoginButton from "../../components/common/GoogleLoginButton";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -24,6 +26,9 @@ export default function Login() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Google account role selection
+  const [selectedRole, setSelectedRole] = useState("jobseeker");
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -58,20 +63,19 @@ export default function Login() {
         password,
       });
 
-      // Read the role returned by the existing AuthContext login method.
       const role = data?.role || data?.user?.role;
 
       if (!role) {
         toast.error(
-          "Login response did not contain a user role. Please check AuthContext."
+          "Login response did not contain a user role."
         );
         return;
       }
 
       toast.success(data?.message || "Login successful!");
 
-      // Redirect to the originally requested page when possible.
       const requestedPath = location.state?.from;
+
       const requestedUrl =
         requestedPath?.pathname &&
         requestedPath.pathname !== "/login" &&
@@ -94,7 +98,9 @@ export default function Login() {
       }
     } catch (error) {
       toast.error(
-        error?.message || "Unable to log in. Please check your credentials."
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to log in. Please check your credentials."
       );
     } finally {
       setSubmitting(false);
@@ -103,9 +109,12 @@ export default function Login() {
 
   return (
     <main className="min-h-screen bg-white lg:grid lg:grid-cols-2">
+
       {/* Left promotional section */}
       <section className="relative hidden overflow-hidden bg-[#17152f] px-12 py-12 text-white lg:flex lg:flex-col xl:px-20">
+
         <div className="absolute -right-24 top-20 h-80 w-80 rounded-full bg-violet-600/25 blur-3xl" />
+
         <div className="absolute -bottom-24 -left-20 h-80 w-80 rounded-full bg-indigo-500/20 blur-3xl" />
 
         <Link to="/" className="relative flex items-center gap-3">
@@ -119,6 +128,7 @@ export default function Login() {
         </Link>
 
         <div className="relative my-auto max-w-xl py-16">
+
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm text-violet-200">
             <Sparkles size={16} />
             Your next opportunity starts here
@@ -126,7 +136,9 @@ export default function Login() {
 
           <h1 className="text-5xl font-extrabold leading-[1.15] tracking-tight xl:text-6xl">
             Make your next
-            <span className="block text-violet-300">career move.</span>
+            <span className="block text-violet-300">
+              career move.
+            </span>
           </h1>
 
           <p className="mt-6 max-w-md text-base leading-8 text-slate-300">
@@ -135,6 +147,7 @@ export default function Login() {
           </p>
 
           <div className="mt-10 grid grid-cols-2 gap-4">
+
             <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
               <Sparkles className="mb-3 text-violet-300" size={22} />
               <p className="font-bold">AI-powered tools</p>
@@ -153,6 +166,7 @@ export default function Login() {
                 Explore jobs that fit your goals
               </p>
             </div>
+
           </div>
         </div>
 
@@ -163,7 +177,9 @@ export default function Login() {
 
       {/* Login form */}
       <section className="flex min-h-screen items-center justify-center px-5 py-10 sm:px-10">
+
         <div className="w-full max-w-md">
+
           <Link
             to="/"
             className="mb-12 inline-flex items-center gap-3 lg:hidden"
@@ -178,6 +194,7 @@ export default function Login() {
           </Link>
 
           <div className="mb-8">
+
             <p className="mb-3 text-sm font-bold uppercase tracking-[0.18em] text-violet-600">
               Welcome back
             </p>
@@ -189,11 +206,14 @@ export default function Login() {
             <p className="mt-3 text-sm leading-6 text-slate-500">
               Enter your details to continue to your career dashboard.
             </p>
+
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
+
             {/* Email */}
             <div>
+
               <label
                 htmlFor="email"
                 className="mb-2 block text-sm font-semibold text-slate-700"
@@ -202,6 +222,7 @@ export default function Login() {
               </label>
 
               <div className="relative">
+
                 <Mail
                   size={19}
                   className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
@@ -219,12 +240,15 @@ export default function Login() {
                   disabled={submitting}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-12 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-500/10 disabled:opacity-60"
                 />
+
               </div>
             </div>
 
             {/* Password */}
             <div>
+
               <div className="mb-2 flex items-center justify-between gap-3">
+
                 <label
                   htmlFor="password"
                   className="text-sm font-semibold text-slate-700"
@@ -238,9 +262,11 @@ export default function Login() {
                 >
                   Forgot password?
                 </Link>
+
               </div>
 
               <div className="relative">
+
                 <LockKeyhole
                   size={19}
                   className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
@@ -271,6 +297,7 @@ export default function Login() {
                     <Eye size={18} />
                   )}
                 </button>
+
               </div>
             </div>
 
@@ -283,8 +310,69 @@ export default function Login() {
               {submitting ? "Signing in..." : "Sign in"}
               {!submitting && <ArrowRight size={18} />}
             </button>
+
           </form>
 
+          {/* Google Login */}
+          <div className="mt-6">
+
+            <div className="relative flex items-center">
+
+              <div className="flex-grow border-t border-slate-200"></div>
+
+              <span className="mx-4 text-xs font-semibold tracking-wider text-slate-400">
+                OR CONTINUE WITH
+              </span>
+
+              <div className="flex-grow border-t border-slate-200"></div>
+
+            </div>
+
+            {/* Account type selection */}
+            <div className="mb-5 mt-5">
+
+              <p className="mb-3 text-sm font-semibold text-slate-700">
+                Select your account type
+              </p>
+
+              <div className="grid grid-cols-2 gap-3">
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedRole("jobseeker")}
+                  aria-pressed={selectedRole === "jobseeker"}
+                  className={`rounded-xl border p-3 text-sm font-semibold transition ${
+                    selectedRole === "jobseeker"
+                      ? "border-violet-600 bg-violet-50 text-violet-700"
+                      : "border-slate-200 text-slate-600 hover:border-violet-300"
+                  }`}
+                >
+                  Job Seeker
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedRole("recruiter")}
+                  aria-pressed={selectedRole === "recruiter"}
+                  className={`rounded-xl border p-3 text-sm font-semibold transition ${
+                    selectedRole === "recruiter"
+                      ? "border-violet-600 bg-violet-50 text-violet-700"
+                      : "border-slate-200 text-slate-600 hover:border-violet-300"
+                  }`}
+                >
+                  Recruiter
+                </button>
+
+              </div>
+            </div>
+
+            <div className="mt-5">
+              <GoogleLoginButton role={selectedRole} />
+            </div>
+
+          </div>
+
+          {/* Register */}
           <p className="mt-7 text-center text-sm text-slate-500">
             Don't have an account?{" "}
             <Link
@@ -295,14 +383,18 @@ export default function Login() {
             </Link>
           </p>
 
+          {/* Back to home */}
           <div className="mt-10 border-t border-slate-100 pt-5 text-center">
+
             <Link
               to="/"
               className="text-sm font-medium text-slate-500 transition hover:text-violet-600"
             >
               ← Back to home
             </Link>
+
           </div>
+
         </div>
       </section>
     </main>

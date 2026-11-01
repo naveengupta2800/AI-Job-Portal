@@ -2,7 +2,16 @@ const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema({
   name: String,
-  password: String,
+ password: {
+  type: String,
+  required: function () {
+    return !this.googleId;
+  },
+},
+googleId: {
+  type: String,
+  default: null,
+},
   email: { type: String, unique: true, lowercase: true, trim: true },
   role: { type: String, enum: ["jobseeker", "recruiter"], required: true },
 

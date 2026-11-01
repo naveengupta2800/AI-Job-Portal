@@ -6,7 +6,8 @@ const {
   verify,
   login,
   logout,
-  getUserRole
+  getUserRole,
+  googleLogin
 } = require("../controllers/authController");
 
 // REGISTER
@@ -17,6 +18,9 @@ router.post("/verify", verify);
 
 // LOGIN
 router.post("/login", login);
+
+// GOOGLE LOGIN
+router.post("/google", googleLogin);
 
 // LOGOUT
 router.post("/logout", logout);

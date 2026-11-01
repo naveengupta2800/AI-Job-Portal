@@ -1,3 +1,4 @@
+
 import {
   createContext,
   useCallback,
@@ -14,7 +15,7 @@ export function AuthProvider({ children }) {
   const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Restore the user's existing session.
+  // Restore existing session
   const checkAuth = useCallback(async () => {
     setLoading(true);
 
@@ -32,12 +33,11 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // Check session when the application starts.
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
 
-  // Login an existing user.
+  // Existing email/password login
   const login = async (credentials) => {
     const response = await api.post("/api/auth/login", credentials);
     const data = response.data;
@@ -48,19 +48,42 @@ export function AuthProvider({ children }) {
       setUserRole(role);
     }
 
+    return { ...data, role };
+  };
+
+  // Google Login
+  const googleLogin = async (credential, role) => {
+    const response = await api.post("/api/auth/google", {
+      credential,
+      role,
+    });
+
+    const data = response.data;
+
+    const loggedInRole =
+      data?.role ?? data?.user?.role ?? null;
+
+    if (loggedInRole) {
+      setUserRole(loggedInRole);
+    }
+
     return {
       ...data,
-      role,
+      role: loggedInRole,
     };
   };
 
-  // Register a new user.
+  // Existing registration
   const register = async (userData) => {
-    const response = await api.post("/api/auth/register", userData);
+    const response = await api.post(
+      "/api/auth/register",
+      userData
+    );
+
     return response.data;
   };
 
-  // Verify the OTP sent to the user's email.
+  // Existing OTP verification
   const verifyOTP = async (otp) => {
     const response = await api.post("/api/auth/verify", { otp });
     const data = response.data;
@@ -71,13 +94,10 @@ export function AuthProvider({ children }) {
       setUserRole(role);
     }
 
-    return {
-      ...data,
-      role,
-    };
+    return { ...data, role };
   };
 
-  // Log out and clear the local authentication state.
+  // Existing logout
   const logout = async () => {
     try {
       await api.post("/api/auth/logout");
@@ -91,6 +111,7 @@ export function AuthProvider({ children }) {
     loading,
     isAuthenticated: Boolean(userRole),
     login,
+    googleLogin,
     register,
     verifyOTP,
     logout,
